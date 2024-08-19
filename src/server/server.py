@@ -13,15 +13,14 @@ players = {}
 projectiles = []
 
 def csHandler(cs:socket.socket,addr):
-    try: name = cs.recv(1024).decode()
+    try: name = cs.recv(2048).decode()
     except: return
     while True:
         try:
-            cs.settimeout(0.3)
-            data = cs.recv(1024).decode().split(',')
+            data = cs.recv(2048).decode().split(',')
 
             if data[0] == 'SHOOT':
-                projectiles.append([[float(data[1]), float(data[2])], [float(data[3]), float(data[4])], int(data[5])])
+                projectiles.append([float(data[1]), float(data[2]), float(data[3]), float(data[4])])
                 continue
 
             players[name] = data
@@ -29,11 +28,20 @@ def csHandler(cs:socket.socket,addr):
             p = '|'.join([','.join(v) for v in players.values()])
             
             proj = ''
+            radius = 1000
             for projectile in projectiles:
-                if proje
+                _, x,y= players[name]
+                px, py, *_ = projectile
+                print(x, round(px)-radius, round(px)+radius)
+                print(y, round(py)-radius, round(py)+radius)
+                if (x in range(round(px)-radius,round(px)+radius)
+                    and y in range(round(py)-radius,round(py)+radius)):
 
-            allData = p + '=' + proj
-            print(allData)
+                    proj += f'{round(px)},{round(py)}|'
+
+            proj = proj.removesuffix('|')
+
+            allData = p + '==' + proj
 
             cs.send(allData.encode())
 
@@ -45,6 +53,9 @@ def csHandler(cs:socket.socket,addr):
             players.pop(name)
             return
 
+        except ValueError:
+            ...
+
         except Exception as e:
             print(f'[-] {addr} [{e}]')
             players.pop(name)
@@ -54,18 +65,23 @@ def csHandler(cs:socket.socket,addr):
 
 frame = 0
 def gameLoop():
+    global frame
+    dt = 1
     while True:
         for p in projectiles:
-            p[0][0] += p[1][0]
-            p[0][1] += p[1][1]
+            p[0] += p[2] * dt
+            p[1] += p[3] * dt
 
-        print(len(projectiles))
-        if frame % int((1000-len(projectiles))/100) == 0 and projectiles:
+            if abs(p[0]) + abs(p[1]) > 1000:
+                projectiles.remove(p)
+
+        if frame % round(100-len(projectiles)/1000) == 0 and projectiles:
             projectiles.pop(0)
-        
-        clock.tick(60)
+
+        dt = clock.tick(120) / 1000
         frame += 1
 
+Thread(target=gameLoop,daemon=True).start()
 
 while True:
     cs, addr = s.accept()

@@ -3,6 +3,7 @@ from random import randrange
 import MPLib as mplib
 import pygame.gfxdraw
 import numpy as np
+import time as t
 import pygame
 pygame.init()
 
@@ -28,8 +29,6 @@ velY = 0
 accel = 55
 airResistance = 1.13
 
-# Init projectiles
-projectiles:list[tuple[tuple[int,int], tuple[float, float], int]] = []
 
 ## Weapon stats ##
 
@@ -37,7 +36,8 @@ spread = 70
 min_spread = 0.01
 sight_range = 500
 
-firerate = 1 # frames per round
+firerate = 150 # ms per fire
+timer = 0
 
 ### Util ###
 def floor(x, ndigits):
@@ -103,6 +103,7 @@ while run:
                 pressed.remove('d')
 
     ## MOVEMENT ##
+    # ? wher is sendin to server
     if pressed:
         if 'w' in pressed:
             velY += accel * dt
@@ -123,7 +124,9 @@ while run:
     cy += velY
 
     # SHOOTING
-    if pygame.mouse.get_pressed()[0] and frame % firerate == 0:
+    timer += dt*1000
+    if pygame.mouse.get_pressed()[0] and timer > firerate:
+        timer = 0
         r = (end - start) * ((abs(mx-centerX) + abs(my-centerY))) / 2.2
         r = round(r)
 
@@ -134,9 +137,9 @@ while run:
             rx,ry = 0,0
 
         vec = np.array([mx-centerX + rx, my-centerY + ry])
-        vec = vec / np.linalg.norm(vec) * 100
+        vec = vec / np.linalg.norm(vec) * 1000
 
-        mplib.send_data(','.join(['SHOOT',str(-cx+centerX),str(-cy+centerY),str(vec[0]),str(vec[1]),'5']))
+        mplib.send_data(f'SHOOT,{round(-cx+centerX)},{round(-cy+centerY)},{round(vec[0],2)},{round(vec[1],2)}')
 
 
 
@@ -161,15 +164,17 @@ while run:
     ## Draw player ##
     #pygame.draw.circle(disp, (70,70,70), (centerX,centerY), 20)
 
-    for p in projectiles:
-        pygame.draw.circle(disp, (255,255,255), (p[0][0]+cx, p[0][1]+cy), 5)
+    for p in mplib.projectiles:
+        if not p: continue
+        x,y = p.split(',')
+        pygame.draw.circle(disp, (255,255,255), (float(x)+cx, float(y)+cy), 5)
 
     # Draw players
     for p in mplib.players:
-        p[1] = -float(p[1]) + centerX + cx
-        p[2] = -float(p[2]) + centerY + cy
-        p[3] = float(p[3])
-        p[4] = float(p[4])
+        try:
+            p[1] = -float(p[1]) + centerX + cx
+            p[2] = -float(p[2]) + centerY + cy
+        except: continue
 
         if p[0] == name:
             px, py = int(p[1]), int(p[2])
@@ -179,11 +184,7 @@ while run:
         text = font.render(p[0], True,(255,255,255))
         disp.blit(text, (p[1] - text.get_width()//2, p[2] - 30))
 
-
-    data = [name, str(round(cx,2)), str(round(cy,2)), str(round(velX,2)), str(round(velY,2))]
-
-
-    mplib.data = data
+    mplib.data = [name, str(round(cx)), str(round(cy))]
 
     pygame.display.update()
     dt = clock.tick(60) / 1000
