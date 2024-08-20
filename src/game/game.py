@@ -32,11 +32,11 @@ airResistance = 1.13
 
 ## Weapon stats ##
 
-spread = 70
-min_spread = 0.01
+spread = 60
+min_spread = 0.02
 sight_range = 500
 
-firerate = 150 # ms per fire
+firerate = 100 # ms per fire
 timer = 0
 
 ### Util ###
@@ -137,7 +137,7 @@ while run:
             rx,ry = 0,0
 
         vec = np.array([mx-centerX + rx, my-centerY + ry])
-        vec = vec / np.linalg.norm(vec) * 1000
+        vec = vec / np.linalg.norm(vec) * 10_000
 
         mplib.send_data(f'SHOOT,{round(-cx+centerX)},{round(-cy+centerY)},{round(vec[0],2)},{round(vec[1],2)}')
 
@@ -154,7 +154,7 @@ while run:
     ## Draw accuracy ##
 
     radius = (abs(velX) + abs(velY)) / spread
-    start  = atan2(centerX - mx,centerY - my) + pi/2 - radius/2
+    start  = atan2(centerX - mx, centerY - my) + pi/2 - radius/2
     end    = start + radius
     start -= min_spread
     end   += min_spread
@@ -169,20 +169,30 @@ while run:
         x,y = p.split(',')
         pygame.draw.circle(disp, (255,255,255), (float(x)+cx, float(y)+cy), 5)
 
+    # Draw player
+
+    px = centerX + velX*2
+    py = centerY + velY*2
+
+    pygame.draw.circle(disp, (70,70,70), (px, py), 20)
+
+    text = font.render(name, True,(255,255,255))
+    disp.blit(text, (px - text.get_width()//2, py - 30))
+
     # Draw players
     for p in mplib.players:
+        if p[0] == name:
+            continue
+        
         try:
-            p[1] = -float(p[1]) + centerX + cx
-            p[2] = -float(p[2]) + centerY + cy
+            x = -float(p[1]) + centerX + cx
+            y = -float(p[2]) + centerY + cy
         except: continue
 
-        if p[0] == name:
-            px, py = int(p[1]), int(p[2])
-
-        pygame.draw.circle(disp, (70,70,70), (p[1], p[2]), 20)
+        pygame.draw.circle(disp, (70,70,70), (x, y), 20)
 
         text = font.render(p[0], True,(255,255,255))
-        disp.blit(text, (p[1] - text.get_width()//2, p[2] - 30))
+        disp.blit(text, (x - text.get_width()//2, y - 30))
 
     mplib.data = [name, str(round(cx)), str(round(cy))]
 

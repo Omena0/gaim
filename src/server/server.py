@@ -1,5 +1,6 @@
 from threading import Thread
 from pygame import time
+from math import sqrt
 import socket
 
 s = socket.socket()
@@ -28,16 +29,12 @@ def csHandler(cs:socket.socket,addr):
             p = '|'.join([','.join(v) for v in players.values()])
             
             proj = ''
-            radius = 1000
-            for projectile in projectiles:
-                _, x,y= players[name]
-                px, py, *_ = projectile
-                print(x, round(px)-radius, round(px)+radius)
-                print(y, round(py)-radius, round(py)+radius)
-                if (x in range(round(px)-radius,round(px)+radius)
-                    and y in range(round(py)-radius,round(py)+radius)):
+            _, x, y= players[name]
+            x,y = float(x), float(y)
+            for i,projectile in enumerate(projectiles):
+                px,py,*_ = projectile
 
-                    proj += f'{round(px)},{round(py)}|'
+                proj += f'{round(px)},{round(py)}|'
 
             proj = proj.removesuffix('|')
 
@@ -72,7 +69,7 @@ def gameLoop():
             p[0] += p[2] * dt
             p[1] += p[3] * dt
 
-            if abs(p[0]) + abs(p[1]) > 1000:
+            if abs(p[0]) + abs(p[1]) > 4000:
                 projectiles.remove(p)
 
         if frame % round(100-len(projectiles)/1000) == 0 and projectiles:

@@ -48,8 +48,6 @@ def _start_blocking(ip:str, port:int, name:str):
             s.settimeout(0.1)
             msg = recvall(s).decode()
 
-            print(msg)
-
             raw_players,raw_projectiles = msg.split('==')
 
             players     = [player.split(',') for player in raw_players.split('|')]
@@ -62,7 +60,7 @@ def _start_blocking(ip:str, port:int, name:str):
             print(e)
             raise e
             break
-        
+
         clock.tick(60)
 
 
