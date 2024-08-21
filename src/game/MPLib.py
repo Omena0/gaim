@@ -42,7 +42,7 @@ def _start_blocking(ip:str, port:int, name:str):
     while True:
         try:
             # Send our current position, velocity, ect
-            s.send(','.join(data).encode())
+            s.send((','.join(data)+'\r').encode())
 
             # Server will respond with every other player's data
             s.settimeout(0.1)
@@ -59,7 +59,6 @@ def _start_blocking(ip:str, port:int, name:str):
         except Exception as e:
             print(e)
             raise e
-            break
 
         clock.tick(60)
 

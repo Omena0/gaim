@@ -14,29 +14,30 @@ disp = pygame.display.set_mode(size,pygame.RESIZABLE)
 clock = pygame.time.Clock()
 font = pygame.font.SysFont(None, 20)
 
-
 pygame.mouse.set_cursor(pygame.cursors.broken_x)
 
-# Init camera
+
+# Camera
 centerX, centerY = size[0]//2, size[1]//2
 cx, cy = 0, 0
 px, py = centerX, centerY
 
-# Init movement vars
+# Movement vars
 pressed = []
 velX = 0
 velY = 0
 accel = 55
 airResistance = 1.13
 
+# Player stats
+health = 100
 
 ## Weapon stats ##
-
 spread = 60
 min_spread = 0.02
 sight_range = 500
 
-firerate = 100 # ms per fire
+firerate = 1 # ms per fire
 timer = 0
 
 ### Util ###
@@ -56,7 +57,7 @@ def draw_sector(center, radius, theta0, theta1, color, ndiv=50):
 
     pygame.gfxdraw.filled_polygon(disp, points, color)
 
-name = 'TestPlayer'+ str(randrange(0,1000))
+name = f'TestPlayer-{str(randrange(0, 1000))}'
 
 #### MAINLOOP ####
 mplib.start('127.0.0.1', 1337, name)
@@ -79,7 +80,7 @@ while run:
             size = event.size
             disp = pygame.display.set_mode(size,pygame.RESIZABLE)
             centerX, centerY = size[0]//2, size[1]//2
-        
+
         elif event.type == pygame.KEYDOWN:
             key = event.key
             if key == pygame.K_w:
@@ -90,7 +91,7 @@ while run:
                 pressed.append('a')
             elif key == pygame.K_d:
                 pressed.append('d')
-        
+
         elif event.type == pygame.KEYUP:
             key = event.key
             if key == pygame.K_w:
@@ -103,7 +104,6 @@ while run:
                 pressed.remove('d')
 
     ## MOVEMENT ##
-    # ? wher is sendin to server
     if pressed:
         if 'w' in pressed:
             velY += accel * dt
@@ -116,7 +116,7 @@ while run:
 
         if 'd' in pressed:
             velX -= accel * dt
-    
+
     velX = floor(velX / airResistance, 2)
     velY = floor(velY / airResistance, 2)
 
@@ -139,8 +139,7 @@ while run:
         vec = np.array([mx-centerX + rx, my-centerY + ry])
         vec = vec / np.linalg.norm(vec) * 10_000
 
-        mplib.send_data(f'SHOOT,{round(-cx+centerX)},{round(-cy+centerY)},{round(vec[0],2)},{round(vec[1],2)}')
-
+        mplib.send_data(f'SHOOT,{round(cx)},{round(cy)},{round(vec[0],2)},{round(vec[1],2)}\r')
 
 
     ### RENDERING ###
@@ -151,28 +150,28 @@ while run:
     # "map"
     draw_rect(0,0,size[0]*2,size[1]*2, (30,30,30))
 
+    # Offset player
+    px = centerX + velX*2
+    py = centerY + velY*2
+
     ## Draw accuracy ##
 
     radius = (abs(velX) + abs(velY)) / spread
-    start  = atan2(centerX - mx, centerY - my) + pi/2 - radius/2
+    start  = atan2(px - mx, py - my) + pi/2 - radius/2
     end    = start + radius
     start -= min_spread
     end   += min_spread
 
     draw_sector((px, py), sight_range, start, end, (40,40,40))
 
-    ## Draw player ##
-    #pygame.draw.circle(disp, (70,70,70), (centerX,centerY), 20)
 
+    # Draw projectiles
     for p in mplib.projectiles:
         if not p: continue
         x,y = p.split(',')
-        pygame.draw.circle(disp, (255,255,255), (float(x)+cx, float(y)+cy), 5)
+        pygame.draw.circle(disp, (255,255,255), (-float(x)+cx+centerX, -float(y)+cy+centerY), 5)
 
     # Draw player
-
-    px = centerX + velX*2
-    py = centerY + velY*2
 
     pygame.draw.circle(disp, (70,70,70), (px, py), 20)
 
@@ -183,7 +182,7 @@ while run:
     for p in mplib.players:
         if p[0] == name:
             continue
-        
+
         try:
             x = -float(p[1]) + centerX + cx
             y = -float(p[2]) + centerY + cy
